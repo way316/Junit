@@ -1,6 +1,6 @@
 # Develop Real-Time Spring Boot Unit Tests
 
-## Integration   Test vs Unit Test
+## Integration Test vs Unit Test
 
 ### Integration Test (集成测试) 
 
@@ -221,4 +221,162 @@ private static Stream<Arguments> provideStringsForIsBlank() {
     );
 }
 ```
+
+## SpringBoot Test
+
+1. Add Maven dependency
+
+   ```xml
+   		<dependency>
+   			<groupId>org.springframework.boot</groupId>
+   			<artifactId>spring-boot-starter-test</artifactId>
+   			<scope>test</scope>
+   		</dependency>
+   ```
+
+   
+
+2. Create Test folder and add @SpringBootTest before the class.
+
+   ```java
+   @SpringBootTest
+   public class ApplicationExampleTest {
+   
+       @Test
+       void basicTest() {
+   
+       }
+   }
+   ```
+
+3. If the package name in test folder is different from the main, add:
+
+   ```java
+   @SpringBootTest(classes = MvcTestingExampleApplication.class)
+   ```
+
+   
+
+Something New:
+
+```java
+assertAll()
+//test all method at once
+
+assertAll("Testing all aseertEquals",
+	()-> assertEquals(...),
+	()-> assertEquals(...)
+)
+	
+
+```
+
+
+
+## Mockit
+
+![image-20240703012941176](C:\Users\Yan Wang\AppData\Roaming\Typora\typora-user-images\image-20240703012941176.png)
+
+Steps:
+
+1. Create Mock for DAO
+
+2. Inject mock into Service (After this, the mock DAO created in step 1 will be used to create the Service)
+
+3. Setup expectations
+
+4. Call method under test and assert results
+
+5. Verify method calls
+
+   ```java
+   @SpringBootTest(classes = MvcTestingExampleApplication.class)
+   public class MockAnnotationTest {
+       @Autowired
+       ApplicationContext context;
+   
+       @Autowired
+       CollegeStudent studentOne;
+   
+       @Autowired
+       StudentGrades studentGrades;
+   
+       @Mock
+       private ApplicationDao applicationDAO;
+   
+       @InjectMocks
+       private ApplicationService applicationService;
+   
+       @BeforeEach
+       public void beforeEach() {
+           studentOne.setFirstname("Chad");
+           studentOne.setLastname("Darby");
+           studentOne.setEmailAddress("chad.darby@luv2code_school.com");
+           studentOne.setStudentGrades(studentGrades);
+       }
+   
+       @DisplayName("When & Verify")
+       @Test
+       public void assertEqualsTestAddGrades() {
+           when(applicationDAO.addGradeResultsForSingleClass(
+                   studentGrades.getMathGradeResults())).thenReturn(100.00);
+   
+           assertEquals(100, applicationService.addGradeResultsForSingleClass(
+                   studentOne.getStudentGrades().getMathGradeResults()));
+   
+           verify(applicationDAO).addGradeResultsForSingleClass(studentGrades.getMathGradeResults());
+   
+           verify(applicationDAO, times(1)).addGradeResultsForSingleClass(
+                   studentGrades.getMathGradeResults());
+       }
+   ```
+
+   
+
+### MockBean
+
+Using @MockBean to replace @Mock, so you do not need to use @InjectMocks anymore. Just use @Autowired.
+
+```java
+    // @Mock
+    @MockBean
+    private ApplicationDao applicationDao;
+
+    // @InjectMocks
+    @Autowired
+    private ApplicationService applicationService;
+```
+
+### MockitException
+
+```java
+    @DisplayName("Multiple Stubbing")
+    @Test
+    public void stubbingConsecutiveCalls() {
+        CollegeStudent nullStudent = (CollegeStudent) context.getBean("collegeStudent");
+
+        when(applicationDAO.checkNull(nullStudent))
+                .thenThrow(new RuntimeException())
+                .thenReturn("Do not throw exception second time");
+
+        assertThrows(RuntimeException.class, () -> {
+            applicationService.checkNull(nullStudent);
+        });
+
+        assertEquals("Do not throw exception second time",
+                applicationService.checkNull(nullStudent));
+
+        verify(applicationDAO, times(2)).checkNull(nullStudent);
+    }
+```
+
+
+
+## @sql
+
+Use @Sql("/test-schema.sql") on the top of the method, the SQL script will run before the method called.
+
+
+
+
 
